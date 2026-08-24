@@ -392,7 +392,10 @@ function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) 
         </div>
         <div className="dashboard-filters__controls">
           <label>Tanggal
-            <input type="date" value={filterDate} onChange={(event) => { const value = event.target.value; setFilterDate(value); setFilterMonth(value ? 'all' : defaultDashboardMonth); setFilterYear(value ? 'all' : defaultDashboardYear) }} />
+            <span className="date-control">
+              <input type="date" value={filterDate} onChange={(event) => { const value = event.target.value; setFilterDate(value); setFilterMonth(value ? 'all' : defaultDashboardMonth); setFilterYear(value ? 'all' : defaultDashboardYear) }} />
+              <CalendarDays size={14} aria-hidden="true" />
+            </span>
           </label>
           <label>Bulan
             <span className="select-control"><select value={filterMonth} onChange={(event) => setFilterMonth(event.target.value)} disabled={Boolean(filterDate)}><option value="all">Semua bulan</option>{Array.from({ length: 12 }, (_, index) => { const value = String(index + 1).padStart(2, '0'); return <option key={value} value={value}>{new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, index, 1))}</option> })}</select><ChevronDown size={14} /></span>

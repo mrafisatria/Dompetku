@@ -96,6 +96,11 @@ button { cursor: pointer; }
 .dashboard-filters__controls input, .dashboard-filters__controls select { width: 100%; height: 35px; border: 1px solid #dfdcd2; border-radius: 9px; outline: 0; background: #faf9f5; color: #53605c; font-size: 9px; font-weight: 600; text-transform: none; }
 .dashboard-filters__controls input { padding: 0 9px; }
 .dashboard-filters__controls input:focus, .dashboard-filters__controls select:focus { border-color: #8bb6a6; box-shadow: 0 0 0 3px rgba(139,182,166,.12); }
+.date-control { position: relative; display: block; width: 100%; min-width: 0; max-width: 100%; overflow: hidden; border-radius: 9px; }
+.date-control input[type='date'] { display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; padding: 0 29px 0 9px; appearance: none; -webkit-appearance: none; }
+.date-control input[type='date']::-webkit-date-and-time-value { min-width: 0; text-align: left; }
+.date-control input[type='date']::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
+.date-control > svg { position: absolute; top: 50%; right: 9px; color: #8b918c; pointer-events: none; transform: translateY(-50%); }
 .select-control { position: relative; display: block; }
 .select-control select { padding: 0 25px 0 9px; appearance: none; cursor: pointer; }
 .select-control select:disabled { cursor: not-allowed; opacity: .5; }
@@ -282,7 +287,7 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
   .dashboard-filters { width: 100%; min-width: 0; overflow: hidden; padding: 14px; }
   .dashboard-filters__controls { display: grid; width: 100%; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .dashboard-filters__controls > label { width: 100%; min-width: 0; overflow: hidden; }
-  .dashboard-filters__controls input, .dashboard-filters__controls select, .select-control { display: block; min-width: 0; max-width: 100%; }
+  .dashboard-filters__controls input, .dashboard-filters__controls select, .date-control, .select-control { display: block; min-width: 0; max-width: 100%; }
   .filter-reset { grid-column: 1 / -1; justify-content: center; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; overflow: visible; }
   .stat-card:first-child { grid-column: 1 / -1; }
