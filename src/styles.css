@@ -72,6 +72,9 @@ button { cursor: pointer; }
 .button--dark { background: var(--ink); color: white; box-shadow: 0 6px 14px rgba(25,61,56,.14); }
 .button--outline { border-color: #d8d4c9; background: #fffefa; color: var(--ink); }
 .button--ghost { background: transparent; color: #727873; }
+.button--danger-outline { border-color: #e7c5bb; background: #fff9f6; color: #bb634d; }
+.button--danger-outline:hover:not(:disabled) { border-color: #d99c8b; background: #fbe9e3; }
+.button--danger { background: #bd624c; color: #fff; box-shadow: 0 6px 14px rgba(189,98,76,.2); }
 .button--wide { width: 100%; min-height: 46px; margin-top: 5px; }
 .text-button, .text-link { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--ink); font-size: 11px; font-weight: 700; }
 
@@ -179,6 +182,15 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .optional { color: #a2a49f; font-size: 8px; font-weight: 500; }
 .modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 3px; padding-top: 16px; border-top: 1px solid #ebe8e0; }
+.danger-modal { width: min(100%, 470px); }
+.danger-modal__icon { display: grid; width: 48px; height: 48px; margin-bottom: 18px; place-items: center; border-radius: 15px; background: #f8ded6; color: #bb604a; }
+.danger-modal .modal__header { margin-bottom: 13px; }
+.danger-modal__description { margin-bottom: 20px; color: #707873; font-size: 11px; line-height: 1.65; }
+.danger-modal__description strong { color: #a75542; }
+.danger-confirmation { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; color: #59645f; font-size: 10px; font-weight: 600; }
+.danger-confirmation strong { color: #a75542; letter-spacing: .08em; }
+.danger-confirmation input { width: 100%; height: 43px; padding: 0 12px; border: 1px solid #dfc9c2; border-radius: 10px; outline: 0; background: #fff9f6; color: #5b4039; font-weight: 700; letter-spacing: .08em; }
+.danger-confirmation input:focus { border-color: #d08a77; box-shadow: 0 0 0 3px rgba(208,138,119,.14); }
 .toast { position: fixed; z-index: 110; right: 26px; bottom: 24px; display: flex; align-items: center; gap: 10px; max-width: min(370px, calc(100vw - 32px)); padding: 12px 15px; border: 1px solid #d9e2dc; border-radius: 12px; background: #fff; box-shadow: 0 12px 35px rgba(29,57,51,.16); color: #52635f; font-size: 11px; font-weight: 600; animation: slide-up .2s ease; }
 
 .auth-page { display: grid; min-height: 100vh; grid-template-columns: 1.05fr .95fr; background: #f8f6f0; }
@@ -239,6 +251,7 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
   .page-heading > div > p:last-child { max-width: 310px; line-height: 1.5; }
   .page-heading__add { display: none; }
   .heading-actions .button--dark { display: none; }
+  .heading-actions { flex-wrap: wrap; justify-content: flex-end; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; overflow: visible; }
   .stat-card:first-child { grid-column: 1 / -1; }
   .stat-card { min-height: 132px; padding: 16px; }

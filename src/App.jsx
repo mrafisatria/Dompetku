@@ -376,7 +376,7 @@ function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
   )
 }
 
-function TransactionsPage({ transactions, onDelete, onAdd }) {
+function TransactionsPage({ transactions, onDelete, onDeleteAll, onAdd }) {
   const [search, setSearch] = useState('')
   const [type, setType] = useState('all')
   const [month, setMonth] = useState('all')
@@ -407,7 +407,11 @@ function TransactionsPage({ transactions, onDelete, onAdd }) {
     <>
       <section className="page-heading page-heading--transactions">
         <div><p className="overline">RIWAYAT KEUANGAN</p><h1>Semua transaksi</h1><p>Temukan, filter, dan tinjau seluruh pergerakan uangmu.</p></div>
-        <div className="heading-actions"><button className="button button--outline" onClick={exportCsv}><Download size={17} /> Ekspor CSV</button><button className="button button--dark" onClick={onAdd}><Plus size={17} /> Catat transaksi</button></div>
+        <div className="heading-actions">
+          <button className="button button--danger-outline" onClick={onDeleteAll} disabled={!transactions.length}><Trash2 size={17} /> Hapus semua</button>
+          <button className="button button--outline" onClick={exportCsv} disabled={!filtered.length}><Download size={17} /> Ekspor CSV</button>
+          <button className="button button--dark" onClick={onAdd}><Plus size={17} /> Catat transaksi</button>
+        </div>
       </section>
       <section className="panel transactions-panel">
         <div className="filters">
@@ -421,6 +425,43 @@ function TransactionsPage({ transactions, onDelete, onAdd }) {
         <TransactionsTable transactions={filtered} onDelete={onDelete} />
       </section>
     </>
+  )
+}
+
+function DeleteAllModal({ count, onClose, onConfirm, deleting }) {
+  const [confirmation, setConfirmation] = useState('')
+  const isConfirmed = confirmation.trim().toUpperCase() === 'HAPUS'
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && !deleting && onClose()}>
+      <section className="modal danger-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-all-title" aria-describedby="delete-all-description">
+        <div className="danger-modal__icon"><Trash2 size={24} /></div>
+        <div className="modal__header">
+          <div><p className="overline">TINDAKAN PERMANEN</p><h2 id="delete-all-title">Hapus semua transaksi?</h2></div>
+          <button className="icon-button" aria-label="Tutup" onClick={onClose} disabled={deleting}><X size={20} /></button>
+        </div>
+        <p id="delete-all-description" className="danger-modal__description">
+          Seluruh <strong>{count} transaksi</strong> beserta riwayat pemasukan dan pengeluaran akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.
+        </p>
+        <label className="danger-confirmation">
+          Ketik <strong>HAPUS</strong> untuk melanjutkan
+          <input
+            autoFocus
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            placeholder="HAPUS"
+            autoComplete="off"
+            disabled={deleting}
+          />
+        </label>
+        <div className="modal__actions">
+          <button type="button" className="button button--ghost" onClick={onClose} disabled={deleting}>Batal</button>
+          <button type="button" className="button button--danger" onClick={onConfirm} disabled={!isConfirmed || deleting}>
+            <Trash2 size={17} /> {deleting ? 'Menghapus…' : 'Hapus semua transaksi'}
+          </button>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -472,7 +513,9 @@ function App() {
     return stored ? JSON.parse(stored) : demoTransactions
   })
   const [modalOpen, setModalOpen] = useState(false)
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deletingAll, setDeletingAll] = useState(false)
   const [toast, setToast] = useState('')
   const [loadingData, setLoadingData] = useState(false)
 
@@ -544,6 +587,32 @@ function App() {
     showToast('Transaksi dihapus.')
   }
 
+  async function deleteAllTransactions() {
+    if (!transactions.length) {
+      setDeleteAllOpen(false)
+      return
+    }
+
+    setDeletingAll(true)
+    if (isSupabaseConfigured) {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('user_id', session.user.id)
+
+      if (error) {
+        showToast(`Gagal menghapus semua transaksi: ${error.message}`)
+        setDeletingAll(false)
+        return
+      }
+    }
+
+    setTransactions([])
+    setDeletingAll(false)
+    setDeleteAllOpen(false)
+    showToast('Semua transaksi berhasil dihapus.')
+  }
+
   if (!authReady) return <div className="app-loader"><Logo /><span /></div>
   if (isSupabaseConfigured && !session) return <AuthScreen />
 
@@ -556,10 +625,11 @@ function App() {
         <main className="page-content">
           {loadingData ? <div className="content-loader"><span /> Memuat catatan keuangan…</div> : page === 'dashboard'
             ? <Dashboard transactions={transactions} onDelete={deleteTransaction} onAdd={() => setModalOpen(true)} goToTransactions={() => setPage('transactions')} />
-            : <TransactionsPage transactions={transactions} onDelete={deleteTransaction} onAdd={() => setModalOpen(true)} />}
+            : <TransactionsPage transactions={transactions} onDelete={deleteTransaction} onDeleteAll={() => setDeleteAllOpen(true)} onAdd={() => setModalOpen(true)} />}
         </main>
       </div>
       {modalOpen && <TransactionModal onClose={() => setModalOpen(false)} onSave={addTransaction} saving={saving} />}
+      {deleteAllOpen && <DeleteAllModal count={transactions.length} onClose={() => setDeleteAllOpen(false)} onConfirm={deleteAllTransactions} deleting={deletingAll} />}
       {toast && <div className="toast" role="status"><span />{toast}</div>}
     </div>
   )
