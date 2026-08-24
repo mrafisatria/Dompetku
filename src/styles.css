@@ -270,6 +270,7 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
   .bottom-nav button.active { color: var(--ink); }
   .bottom-nav button.bottom-nav__add { width: 48px; height: 48px; margin: -25px auto 0; justify-content: center; border-radius: 16px; background: var(--ink); color: #fff; box-shadow: 0 8px 22px rgba(25,61,56,.22); }
   .page-content { padding: 24px 16px 35px; }
+  .page-content > * { width: 100%; min-width: 0; max-width: 100%; }
   .page-heading { align-items: flex-start; margin-bottom: 21px; }
   .page-heading h1 { font-size: 26px; }
   .page-heading > div > p:last-child { max-width: 310px; line-height: 1.5; }
@@ -278,10 +279,11 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
   .page-heading--transactions { align-items: stretch; flex-direction: column; gap: 16px; }
   .page-heading--transactions .heading-actions { display: grid; width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .heading-actions .button { min-width: 0; padding-inline: 10px; white-space: nowrap; }
-  .dashboard-filters { padding: 14px; }
-  .dashboard-filters__controls { display: grid; grid-template-columns: 1fr 1fr; }
-  .dashboard-filters__controls > label { min-width: 0; }
-  .filter-reset { justify-content: center; }
+  .dashboard-filters { width: 100%; min-width: 0; overflow: hidden; padding: 14px; }
+  .dashboard-filters__controls { display: grid; width: 100%; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dashboard-filters__controls > label { width: 100%; min-width: 0; overflow: hidden; }
+  .dashboard-filters__controls input, .dashboard-filters__controls select, .select-control { display: block; min-width: 0; max-width: 100%; }
+  .filter-reset { grid-column: 1 / -1; justify-content: center; }
   .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; overflow: visible; }
   .stat-card:first-child { grid-column: 1 / -1; }
   .stat-card { min-height: 132px; padding: 16px; }
@@ -331,7 +333,7 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
 }
 
 @media (max-width: 480px) {
-  .dashboard-filters__controls { grid-template-columns: 1fr; }
+  .dashboard-filters__controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .page-content { padding-inline: 12px; }
   .stats-grid { grid-template-columns: 1fr; }
   .stat-card:first-child { grid-column: auto; }
