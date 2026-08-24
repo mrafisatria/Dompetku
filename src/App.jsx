@@ -561,7 +561,7 @@ function TransactionModal({ onClose, onSave, saving }) {
             <button type="button" className={form.type === 'income' ? 'active income' : ''} onClick={() => changeType('income')}><ArrowDownLeft size={18} /> Pemasukan</button>
           </div>
           <label className="amount-field">Nominal
-            <span><b>Rp</b><input autoFocus type="number" min="1" step="1000" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0" required /></span>
+            <span><b>Rp</b><input autoFocus type="number" min="1" step="1" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0" required /></span>
           </label>
           <div className="form-grid">
             <label>Kategori<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
