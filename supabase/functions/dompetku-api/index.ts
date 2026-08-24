@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
 }
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000
@@ -227,6 +227,27 @@ async function transactions(request: Request, admin: SupabaseClient) {
 
     if (error) throw error
     return json({ transaction: data }, 201)
+  }
+
+  if (request.method === "PATCH") {
+    const body = await readJson(request)
+    const id = typeof body.id === "string" ? body.id : ""
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
+      throw new HttpError("Transaksi tidak valid.", 400)
+    }
+
+    const values = validateTransaction(body)
+    const { data, error } = await admin
+      .from("transactions")
+      .update(values)
+      .eq("app_user_id", session.user.id)
+      .eq("id", id)
+      .select("id, type, category, amount, transaction_date, note, created_at")
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) throw new HttpError("Transaksi tidak ditemukan.", 404)
+    return json({ transaction: data })
   }
 
   if (request.method === "DELETE") {

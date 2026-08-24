@@ -25,6 +25,7 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  Pencil,
   Plus,
   ReceiptText,
   Search,
@@ -37,6 +38,7 @@ import {
   X,
 } from 'lucide-react'
 import { apiRequest, isSupabaseConfigured } from './lib/api'
+import { formatAmountInput, sanitizeAmountInput } from './lib/format'
 
 const sessionStorageKey = 'dompetku_app_session'
 
@@ -281,7 +283,7 @@ function CategoryIcon({ type, category }) {
   )
 }
 
-function TransactionsTable({ transactions, onDelete, compact = false }) {
+function TransactionsTable({ transactions, onEdit, onDelete, compact = false }) {
   if (!transactions.length) {
     return (
       <div className="empty-state">
@@ -305,7 +307,10 @@ function TransactionsTable({ transactions, onDelete, compact = false }) {
               <td data-label="Kategori"><span className="category-chip">{transaction.category}</span></td>
               <td data-label="Tanggal">{formatDate(transaction.transaction_date)}</td>
               <td data-label="Nominal" className={`amount amount--${transaction.type}`}>{transaction.type === 'income' ? '+' : '−'}{currency.format(Number(transaction.amount))}</td>
-              <td className="row-action"><button aria-label={`Hapus ${transaction.note || transaction.category}`} title="Hapus" onClick={() => onDelete(transaction)}><Trash2 size={16} /></button></td>
+              <td className="row-action">
+                <button className="row-action__edit" aria-label={`Edit ${transaction.note || transaction.category}`} title="Edit" onClick={() => onEdit(transaction)}><Pencil size={15} /></button>
+                <button className="row-action__delete" aria-label={`Hapus ${transaction.note || transaction.category}`} title="Hapus" onClick={() => onDelete(transaction)}><Trash2 size={16} /></button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -314,7 +319,7 @@ function TransactionsTable({ transactions, onDelete, compact = false }) {
   )
 }
 
-function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
+function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) {
   const [filterDate, setFilterDate] = useState('')
   const [filterMonth, setFilterMonth] = useState('all')
   const [filterYear, setFilterYear] = useState('all')
@@ -442,13 +447,13 @@ function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
 
       <section className="panel recent-panel">
         <div className="panel__header"><div><p className="overline">AKTIVITAS TERBARU</p><h2>Transaksi terakhir</h2></div><button className="text-link" onClick={goToTransactions}>Lihat semuanya <ArrowRight size={15} /></button></div>
-        <TransactionsTable transactions={filteredTransactions.slice(0, 6)} onDelete={onDelete} compact />
+        <TransactionsTable transactions={filteredTransactions.slice(0, 6)} onEdit={onEdit} onDelete={onDelete} compact />
       </section>
     </>
   )
 }
 
-function TransactionsPage({ transactions, onDelete, onDeleteAll, onAdd }) {
+function TransactionsPage({ transactions, onEdit, onDelete, onDeleteAll, onAdd }) {
   const [search, setSearch] = useState('')
   const [type, setType] = useState('all')
   const [month, setMonth] = useState('all')
@@ -494,7 +499,7 @@ function TransactionsPage({ transactions, onDelete, onDeleteAll, onAdd }) {
           </div>
         </div>
         <div className="result-count"><strong>{filtered.length}</strong> transaksi ditemukan</div>
-        <TransactionsTable transactions={filtered} onDelete={onDelete} />
+        <TransactionsTable transactions={filtered} onEdit={onEdit} onDelete={onDelete} />
       </section>
     </>
   )
@@ -537,9 +542,16 @@ function DeleteAllModal({ count, onClose, onConfirm, deleting }) {
   )
 }
 
-function TransactionModal({ onClose, onSave, saving }) {
+function TransactionModal({ transaction, onClose, onSave, saving }) {
   const today = new Date().toISOString().slice(0, 10)
-  const [form, setForm] = useState({ type: 'expense', category: expenseCategories[0], amount: '', transaction_date: today, note: '' })
+  const isEditing = Boolean(transaction)
+  const [form, setForm] = useState(() => transaction ? {
+    type: transaction.type,
+    category: transaction.category,
+    amount: String(Math.trunc(Number(transaction.amount))),
+    transaction_date: transaction.transaction_date,
+    note: transaction.note || '',
+  } : { type: 'expense', category: expenseCategories[0], amount: '', transaction_date: today, note: '' })
   const categories = form.type === 'income' ? incomeCategories : expenseCategories
 
   function changeType(type) {
@@ -554,21 +566,21 @@ function TransactionModal({ onClose, onSave, saving }) {
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <div className="modal__header"><div><p className="overline">CATAT ARUS UANG</p><h2 id="modal-title">Transaksi baru</h2></div><button className="icon-button" aria-label="Tutup" onClick={onClose}><X size={20} /></button></div>
+        <div className="modal__header"><div><p className="overline">{isEditing ? 'PERBARUI CATATAN' : 'CATAT ARUS UANG'}</p><h2 id="modal-title">{isEditing ? 'Edit transaksi' : 'Transaksi baru'}</h2></div><button className="icon-button" aria-label="Tutup" onClick={onClose} disabled={saving}><X size={20} /></button></div>
         <form onSubmit={submit}>
           <div className="type-toggle">
             <button type="button" className={form.type === 'expense' ? 'active expense' : ''} onClick={() => changeType('expense')}><ArrowUpRight size={18} /> Pengeluaran</button>
             <button type="button" className={form.type === 'income' ? 'active income' : ''} onClick={() => changeType('income')}><ArrowDownLeft size={18} /> Pemasukan</button>
           </div>
           <label className="amount-field">Nominal
-            <span><b>Rp</b><input autoFocus type="number" min="1" step="1" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0" required /></span>
+            <span><b>Rp</b><input autoFocus type="text" inputMode="numeric" autoComplete="off" value={formatAmountInput(form.amount)} onChange={(event) => setForm({ ...form, amount: sanitizeAmountInput(event.target.value) })} placeholder="0" required /></span>
           </label>
           <div className="form-grid">
             <label>Kategori<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
             <label>Tanggal<input type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} required /></label>
           </div>
           <label>Catatan <span className="optional">opsional</span><textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} maxLength={240} placeholder="Contoh: Belanja mingguan di pasar" rows={3} /></label>
-          <div className="modal__actions"><button type="button" className="button button--ghost" onClick={onClose}>Batal</button><button className="button button--dark" disabled={saving}>{saving ? 'Menyimpan…' : 'Simpan transaksi'}<ArrowRight size={17} /></button></div>
+          <div className="modal__actions"><button type="button" className="button button--ghost" onClick={onClose} disabled={saving}>Batal</button><button className="button button--dark" disabled={saving}>{saving ? 'Menyimpan…' : isEditing ? 'Simpan perubahan' : 'Simpan transaksi'}<ArrowRight size={17} /></button></div>
         </form>
       </section>
     </div>
@@ -581,6 +593,7 @@ function App() {
   const [page, setPage] = useState('dashboard')
   const [transactions, setTransactions] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState(null)
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingAll, setDeletingAll] = useState(false)
@@ -662,6 +675,22 @@ function App() {
     window.setTimeout(() => setToast(''), 3600)
   }
 
+  function openAddTransaction() {
+    setEditingTransaction(null)
+    setModalOpen(true)
+  }
+
+  function openEditTransaction(transaction) {
+    setEditingTransaction(transaction)
+    setModalOpen(true)
+  }
+
+  function closeTransactionModal() {
+    if (saving) return
+    setModalOpen(false)
+    setEditingTransaction(null)
+  }
+
   async function addTransaction(values) {
     setSaving(true)
     try {
@@ -672,10 +701,31 @@ function App() {
       })
       setTransactions((current) => [data.transaction, ...current])
       setModalOpen(false)
+      setEditingTransaction(null)
       showToast('Transaksi berhasil disimpan.')
     } catch (error) {
       if (error.status === 401) clearSession()
       showToast(`Gagal menyimpan: ${error.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function updateTransaction(values) {
+    setSaving(true)
+    try {
+      const data = await apiRequest('/transactions', {
+        method: 'PATCH',
+        token: session.token,
+        body: { id: editingTransaction.id, ...values, note: values.note || null },
+      })
+      setTransactions((current) => current.map((item) => item.id === data.transaction.id ? data.transaction : item))
+      setModalOpen(false)
+      setEditingTransaction(null)
+      showToast('Transaksi berhasil diperbarui.')
+    } catch (error) {
+      if (error.status === 401) clearSession()
+      showToast(`Gagal memperbarui: ${error.message}`)
     } finally {
       setSaving(false)
     }
@@ -733,16 +783,16 @@ function App() {
   return (
     <div className="app-shell">
       <Sidebar page={page} setPage={setPage} userName={accountName} onSignOut={signOut} />
-      <MobileHeader page={page} setPage={setPage} onAdd={() => setModalOpen(true)} onSignOut={signOut} />
+      <MobileHeader page={page} setPage={setPage} onAdd={openAddTransaction} onSignOut={signOut} />
       <div className="app-main">
-        <Topbar onAdd={() => setModalOpen(true)} />
+        <Topbar onAdd={openAddTransaction} />
         <main className="page-content">
           {loadingData ? <div className="content-loader"><span /> Memuat catatan keuangan…</div> : page === 'dashboard'
-            ? <Dashboard transactions={transactions} onDelete={deleteTransaction} onAdd={() => setModalOpen(true)} goToTransactions={() => setPage('transactions')} />
-            : <TransactionsPage transactions={transactions} onDelete={deleteTransaction} onDeleteAll={() => setDeleteAllOpen(true)} onAdd={() => setModalOpen(true)} />}
+            ? <Dashboard transactions={transactions} onEdit={openEditTransaction} onDelete={deleteTransaction} onAdd={openAddTransaction} goToTransactions={() => setPage('transactions')} />
+            : <TransactionsPage transactions={transactions} onEdit={openEditTransaction} onDelete={deleteTransaction} onDeleteAll={() => setDeleteAllOpen(true)} onAdd={openAddTransaction} />}
         </main>
       </div>
-      {modalOpen && <TransactionModal onClose={() => setModalOpen(false)} onSave={addTransaction} saving={saving} />}
+      {modalOpen && <TransactionModal transaction={editingTransaction} onClose={closeTransactionModal} onSave={editingTransaction ? updateTransaction : addTransaction} saving={saving} />}
       {deleteAllOpen && <DeleteAllModal count={transactions.length} onClose={() => setDeleteAllOpen(false)} onConfirm={deleteAllTransactions} deleting={deletingAll} />}
       {toast && <div className="toast" role="status"><span />{toast}</div>}
     </div>
