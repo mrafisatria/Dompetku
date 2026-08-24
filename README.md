@@ -19,3 +19,9 @@ Tanpa konfigurasi Supabase, aplikasi otomatis berjalan dalam **mode demo** dan m
 4. Mulai ulang server pengembangan.
 
 Gunakan hanya publishable key di frontend. Jangan menaruh secret key atau service-role key di aplikasi React.
+
+### Status integrasi
+
+Database proyek Supabase **Lutu** sudah memiliki tabel `public.transactions`, indeks tanggal per pengguna, empat kebijakan Row Level Security, dan hak Data API untuk pengguna terautentikasi. Konfigurasi lokal disimpan di `.env.local` dan sengaja tidak masuk Git.
+
+Saat melakukan deployment, tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` melalui pengaturan environment variables pada platform hosting. Setelah konfigurasi tersedia, aplikasi otomatis menggunakan Supabase Auth dan menyimpan transaksi ke database; tanpa konfigurasi tersebut aplikasi kembali ke mode demo lokal.
