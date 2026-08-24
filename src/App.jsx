@@ -282,15 +282,32 @@ function TransactionsTable({ transactions, onDelete, compact = false }) {
 }
 
 function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
-  const totals = useMemo(() => transactions.reduce((acc, item) => {
+  const [filterDate, setFilterDate] = useState('')
+  const [filterMonth, setFilterMonth] = useState('all')
+  const [filterYear, setFilterYear] = useState('all')
+  const [filterCategory, setFilterCategory] = useState('all')
+
+  const years = useMemo(() => [...new Set(transactions.map((item) => item.transaction_date.slice(0, 4)))].sort().reverse(), [transactions])
+  const categories = useMemo(() => [...new Set(transactions.map((item) => item.category))].sort((a, b) => a.localeCompare(b, 'id')), [transactions])
+  const hasActiveFilters = Boolean(filterDate || filterMonth !== 'all' || filterYear !== 'all' || filterCategory !== 'all')
+
+  const filteredTransactions = useMemo(() => transactions.filter((item) => {
+    const [year, month] = item.transaction_date.split('-')
+    const periodMatches = filterDate
+      ? item.transaction_date === filterDate
+      : (filterMonth === 'all' || month === filterMonth) && (filterYear === 'all' || year === filterYear)
+    return periodMatches && (filterCategory === 'all' || item.category === filterCategory)
+  }), [transactions, filterDate, filterMonth, filterYear, filterCategory])
+
+  const totals = useMemo(() => filteredTransactions.reduce((acc, item) => {
     const amount = Number(item.amount)
     acc[item.type] += amount
     return acc
-  }, { income: 0, expense: 0 }), [transactions])
+  }, { income: 0, expense: 0 }), [filteredTransactions])
 
   const chartData = useMemo(() => {
-    const latest = transactions.length
-      ? new Date(`${transactions.map((item) => item.transaction_date).sort().at(-1)}T00:00:00`)
+    const latest = filteredTransactions.length
+      ? new Date(`${filteredTransactions.map((item) => item.transaction_date).sort().at(-1)}T00:00:00`)
       : new Date()
     const months = Array.from({ length: 6 }, (_, index) => {
       const date = new Date(latest.getFullYear(), latest.getMonth() - (5 - index), 1)
@@ -298,20 +315,20 @@ function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
       return { key, month: getMonthLabel(key), income: 0, expense: 0 }
     })
     const byKey = Object.fromEntries(months.map((item) => [item.key, item]))
-    transactions.forEach((item) => {
+    filteredTransactions.forEach((item) => {
       const month = byKey[getMonthKey(item.transaction_date)]
       if (month) month[item.type] += Number(item.amount)
     })
     return months
-  }, [transactions])
+  }, [filteredTransactions])
 
   const categoryData = useMemo(() => {
     const grouped = {}
-    transactions.filter((item) => item.type === 'expense').forEach((item) => {
+    filteredTransactions.filter((item) => item.type === 'expense').forEach((item) => {
       grouped[item.category] = (grouped[item.category] || 0) + Number(item.amount)
     })
     return Object.entries(grouped).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 5)
-  }, [transactions])
+  }, [filteredTransactions])
 
   const balance = totals.income - totals.expense
   const savingRate = totals.income ? Math.max(0, Math.round((balance / totals.income) * 100)) : 0
@@ -323,10 +340,32 @@ function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
         <button className="button button--outline page-heading__add" onClick={onAdd}><Plus size={17} /> Tambah transaksi</button>
       </section>
 
+      <section className="dashboard-filters" aria-label="Filter dashboard">
+        <div className="dashboard-filters__heading">
+          <span className="dashboard-filters__icon"><CalendarDays size={17} /></span>
+          <div><strong>Filter ringkasan</strong><small>{filteredTransactions.length} dari {transactions.length} transaksi ditampilkan</small></div>
+        </div>
+        <div className="dashboard-filters__controls">
+          <label>Tanggal
+            <input type="date" value={filterDate} onChange={(event) => { const value = event.target.value; setFilterDate(value); if (value) { setFilterMonth('all'); setFilterYear('all') } }} />
+          </label>
+          <label>Bulan
+            <span className="select-control"><select value={filterMonth} onChange={(event) => setFilterMonth(event.target.value)} disabled={Boolean(filterDate)}><option value="all">Semua bulan</option>{Array.from({ length: 12 }, (_, index) => { const value = String(index + 1).padStart(2, '0'); return <option key={value} value={value}>{new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, index, 1))}</option> })}</select><ChevronDown size={14} /></span>
+          </label>
+          <label>Tahun
+            <span className="select-control"><select value={filterYear} onChange={(event) => setFilterYear(event.target.value)} disabled={Boolean(filterDate)}><option value="all">Semua tahun</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select><ChevronDown size={14} /></span>
+          </label>
+          <label>Kategori
+            <span className="select-control"><select value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}><option value="all">Semua kategori</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></span>
+          </label>
+          {hasActiveFilters && <button className="filter-reset" onClick={() => { setFilterDate(''); setFilterMonth('all'); setFilterYear('all'); setFilterCategory('all') }}><X size={14} /> Reset</button>}
+        </div>
+      </section>
+
       <section className="stats-grid">
         <StatCard label="Total saldo" value={balance} tone="cream" icon={WalletCards} detail={`${savingRate}% dari pemasukan masih tersimpan`} />
-        <StatCard label="Total pemasukan" value={totals.income} tone="sage" icon={TrendingUp} detail={`${transactions.filter((item) => item.type === 'income').length} transaksi masuk`} />
-        <StatCard label="Total pengeluaran" value={totals.expense} tone="peach" icon={TrendingDown} detail={`${transactions.filter((item) => item.type === 'expense').length} transaksi keluar`} />
+        <StatCard label="Total pemasukan" value={totals.income} tone="sage" icon={TrendingUp} detail={`${filteredTransactions.filter((item) => item.type === 'income').length} transaksi masuk`} />
+        <StatCard label="Total pengeluaran" value={totals.expense} tone="peach" icon={TrendingDown} detail={`${filteredTransactions.filter((item) => item.type === 'expense').length} transaksi keluar`} />
       </section>
 
       <section className="dashboard-grid">
@@ -370,7 +409,7 @@ function Dashboard({ transactions, onDelete, onAdd, goToTransactions }) {
 
       <section className="panel recent-panel">
         <div className="panel__header"><div><p className="overline">AKTIVITAS TERBARU</p><h2>Transaksi terakhir</h2></div><button className="text-link" onClick={goToTransactions}>Lihat semuanya <ArrowRight size={15} /></button></div>
-        <TransactionsTable transactions={transactions.slice(0, 6)} onDelete={onDelete} compact />
+        <TransactionsTable transactions={filteredTransactions.slice(0, 6)} onDelete={onDelete} compact />
       </section>
     </>
   )
