@@ -35,7 +35,6 @@ import {
   WalletCards,
   X,
 } from 'lucide-react'
-import { demoTransactions } from './data/demoTransactions'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -156,6 +155,34 @@ function AuthScreen() {
   )
 }
 
+function DatabaseConfigurationRequired() {
+  return (
+    <main className="auth-page">
+      <section className="auth-story">
+        <Logo />
+        <div className="auth-story__content">
+          <span className="eyebrow"><Sparkles size={14} /> Satu data di semua perangkat</span>
+          <h1>Dompet yang sama.<br />Di mana saja.</h1>
+          <p>Dompetku menyimpan catatan keuangan di Supabase agar laptop dan ponsel selalu menggunakan sumber data yang sama.</p>
+        </div>
+        <div className="auth-preview" aria-hidden="true">
+          <div><span>Status penyimpanan</span><strong>Database terpusat</strong></div>
+          <div className="auth-preview__bars"><i /><i /><i /><i /><i /><i /></div>
+        </div>
+      </section>
+      <section className="auth-panel">
+        <div className="auth-card config-card">
+          <span className="auth-card__mobile-logo"><Logo /></span>
+          <span className="config-card__icon"><Settings size={23} /></span>
+          <p className="overline">KONFIGURASI DIPERLUKAN</p>
+          <h2>Koneksi database belum tersedia</h2>
+          <p className="muted">Tambahkan <code>VITE_SUPABASE_URL</code> dan <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> pada environment deployment, lalu build ulang aplikasi.</p>
+        </div>
+      </section>
+    </main>
+  )
+}
+
 function Sidebar({ page, setPage, userEmail }) {
   const navItems = [
     { id: 'dashboard', label: 'Ringkasan', icon: LayoutDashboard },
@@ -208,10 +235,10 @@ function MobileHeader({ page, setPage, onAdd }) {
   )
 }
 
-function Topbar({ onAdd, demoMode }) {
+function Topbar({ onAdd }) {
   return (
     <header className="topbar">
-      <div>{demoMode && <span className="demo-pill"><span /> Mode demo</span>}</div>
+      <div />
       <div className="topbar__actions">
         <button className="icon-button" aria-label="Notifikasi"><Bell size={19} /></button>
         <button className="button button--dark" onClick={onAdd}><Plus size={17} /> Catat transaksi</button>
@@ -544,13 +571,9 @@ function TransactionModal({ onClose, onSave, saving }) {
 
 function App() {
   const [session, setSession] = useState(null)
-  const [authReady, setAuthReady] = useState(!isSupabaseConfigured)
+  const [authReady, setAuthReady] = useState(false)
   const [page, setPage] = useState('dashboard')
-  const [transactions, setTransactions] = useState(() => {
-    if (isSupabaseConfigured) return []
-    const stored = localStorage.getItem('dompetku-transactions')
-    return stored ? JSON.parse(stored) : demoTransactions
-  })
+  const [transactions, setTransactions] = useState([])
   const [modalOpen, setModalOpen] = useState(false)
   const [deleteAllOpen, setDeleteAllOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -566,6 +589,7 @@ function App() {
     })
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
+      if (!nextSession) setTransactions([])
       setAuthReady(true)
     })
     return () => listener.subscription.unsubscribe()
@@ -574,20 +598,41 @@ function App() {
   useEffect(() => {
     if (!isSupabaseConfigured) return
     if (!session) return
-    setLoadingData(true)
-    supabase.from('transactions').select('*').order('transaction_date', { ascending: false }).order('created_at', { ascending: false })
-      .then(({ data, error }) => {
-        if (error) showToast(`Data belum dapat dimuat: ${error.message}`)
-        else setTransactions(data || [])
-        setLoadingData(false)
-      })
-  }, [session])
+    let active = true
+    let refreshTimer
 
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      localStorage.setItem('dompetku-transactions', JSON.stringify(transactions))
+    async function loadTransactions(showLoading = false) {
+      if (showLoading) setLoadingData(true)
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .order('transaction_date', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      if (!active) return
+      if (error) showToast(`Data belum dapat dimuat: ${error.message}`)
+      else setTransactions(data || [])
+      if (showLoading) setLoadingData(false)
     }
-  }, [transactions])
+
+    function scheduleRefresh() {
+      window.clearTimeout(refreshTimer)
+      refreshTimer = window.setTimeout(() => loadTransactions(false), 150)
+    }
+
+    loadTransactions(true)
+    const channel = supabase
+      .channel(`transactions-${session.user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, scheduleRefresh)
+      .subscribe()
+
+    return () => {
+      active = false
+      window.clearTimeout(refreshTimer)
+      supabase.removeChannel(channel)
+    }
+  }, [session])
 
   function showToast(message) {
     setToast(message)
@@ -596,18 +641,13 @@ function App() {
 
   async function addTransaction(values) {
     setSaving(true)
-    if (isSupabaseConfigured) {
-      const { data, error } = await supabase.from('transactions').insert({ ...values, note: values.note || null, user_id: session.user.id }).select().single()
-      if (error) {
-        showToast(`Gagal menyimpan: ${error.message}`)
-        setSaving(false)
-        return
-      }
-      setTransactions((current) => [data, ...current])
-    } else {
-      const item = { ...values, id: crypto.randomUUID(), created_at: new Date().toISOString() }
-      setTransactions((current) => [item, ...current].sort((a, b) => b.transaction_date.localeCompare(a.transaction_date)))
+    const { data, error } = await supabase.from('transactions').insert({ ...values, note: values.note || null, user_id: session.user.id }).select().single()
+    if (error) {
+      showToast(`Gagal menyimpan: ${error.message}`)
+      setSaving(false)
+      return
     }
+    setTransactions((current) => [data, ...current])
     setSaving(false)
     setModalOpen(false)
     showToast('Transaksi berhasil disimpan.')
@@ -615,12 +655,10 @@ function App() {
 
   async function deleteTransaction(transaction) {
     if (!window.confirm(`Hapus transaksi “${transaction.note || transaction.category}”?`)) return
-    if (isSupabaseConfigured) {
-      const { error } = await supabase.from('transactions').delete().eq('id', transaction.id)
-      if (error) {
-        showToast(`Gagal menghapus: ${error.message}`)
-        return
-      }
+    const { error } = await supabase.from('transactions').delete().eq('id', transaction.id)
+    if (error) {
+      showToast(`Gagal menghapus: ${error.message}`)
+      return
     }
     setTransactions((current) => current.filter((item) => item.id !== transaction.id))
     showToast('Transaksi dihapus.')
@@ -633,17 +671,15 @@ function App() {
     }
 
     setDeletingAll(true)
-    if (isSupabaseConfigured) {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('user_id', session.user.id)
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('user_id', session.user.id)
 
-      if (error) {
-        showToast(`Gagal menghapus semua transaksi: ${error.message}`)
-        setDeletingAll(false)
-        return
-      }
+    if (error) {
+      showToast(`Gagal menghapus semua transaksi: ${error.message}`)
+      setDeletingAll(false)
+      return
     }
 
     setTransactions([])
@@ -652,15 +688,16 @@ function App() {
     showToast('Semua transaksi berhasil dihapus.')
   }
 
+  if (!isSupabaseConfigured) return <DatabaseConfigurationRequired />
   if (!authReady) return <div className="app-loader"><Logo /><span /></div>
-  if (isSupabaseConfigured && !session) return <AuthScreen />
+  if (!session) return <AuthScreen />
 
   return (
     <div className="app-shell">
       <Sidebar page={page} setPage={setPage} userEmail={session?.user?.email} />
       <MobileHeader page={page} setPage={setPage} onAdd={() => setModalOpen(true)} />
       <div className="app-main">
-        <Topbar onAdd={() => setModalOpen(true)} demoMode={!isSupabaseConfigured} />
+        <Topbar onAdd={() => setModalOpen(true)} />
         <main className="page-content">
           {loadingData ? <div className="content-loader"><span /> Memuat catatan keuangan…</div> : page === 'dashboard'
             ? <Dashboard transactions={transactions} onDelete={deleteTransaction} onAdd={() => setModalOpen(true)} goToTransactions={() => setPage('transactions')} />

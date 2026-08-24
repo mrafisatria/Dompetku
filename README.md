@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-Tanpa konfigurasi Supabase, aplikasi otomatis berjalan dalam **mode demo** dan menyimpan perubahan di browser (`localStorage`).
+Dompetku menggunakan Supabase sebagai satu-satunya sumber data. Tanpa konfigurasi Supabase, aplikasi menampilkan pemberitahuan konfigurasi dan tidak menyimpan transaksi secara lokal.
 
 ## Menghubungkan Supabase
 
@@ -24,4 +24,4 @@ Gunakan hanya publishable key di frontend. Jangan menaruh secret key atau servic
 
 Database proyek Supabase **Lutu** sudah memiliki tabel `public.transactions`, indeks tanggal per pengguna, empat kebijakan Row Level Security, dan hak Data API untuk pengguna terautentikasi. Konfigurasi lokal disimpan di `.env.local` dan sengaja tidak masuk Git.
 
-Saat melakukan deployment, tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` melalui pengaturan environment variables pada platform hosting. Setelah konfigurasi tersedia, aplikasi otomatis menggunakan Supabase Auth dan menyimpan transaksi ke database; tanpa konfigurasi tersebut aplikasi kembali ke mode demo lokal.
+Saat melakukan deployment, tambahkan `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` melalui pengaturan environment variables pada platform hosting. Setelah konfigurasi tersedia, aplikasi menggunakan Supabase Auth, menyimpan transaksi ke database, dan berlangganan Supabase Realtime agar perangkat yang login dengan akun sama memperoleh pembaruan data.

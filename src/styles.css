@@ -232,6 +232,8 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
 .auth-card__mobile-logo { display: none; margin-bottom: 45px; }
 .form-message { margin: -3px 0 0; padding: 9px 11px; border-radius: 9px; background: #f6e7df; color: #985c4b; font-size: 10px; line-height: 1.45; }
 .auth-card > .text-button { display: flex; margin: 17px auto 0; }
+.config-card__icon { display: grid; width: 48px; height: 48px; margin-bottom: 20px; place-items: center; border-radius: 15px; background: #e2eee9; color: #598a78; }
+.config-card code { padding: 2px 4px; border-radius: 4px; background: #eeeae1; color: #465b55; font-size: 9px; }
 .app-loader, .content-loader { display: flex; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 22px; color: #71807b; font-size: 11px; }
 .app-loader > span, .content-loader > span { width: 26px; height: 26px; border: 3px solid #dae1dd; border-top-color: #639482; border-radius: 50%; animation: spin .8s linear infinite; }
 .content-loader { min-height: 55vh; }

@@ -44,3 +44,18 @@ create policy "Users can delete own transactions"
   on public.transactions for delete
   to authenticated
   using ((select auth.uid()) = user_id);
+
+-- Aktifkan sinkronisasi perubahan lintas perangkat melalui Supabase Realtime.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'transactions'
+  ) then
+    alter publication supabase_realtime add table public.transactions;
+  end if;
+end
+$$;
