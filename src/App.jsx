@@ -22,6 +22,7 @@ import {
   CircleHelp,
   Download,
   LayoutDashboard,
+  KeyRound,
   LogOut,
   Menu,
   Plus,
@@ -35,7 +36,9 @@ import {
   WalletCards,
   X,
 } from 'lucide-react'
-import { isSupabaseConfigured, supabase } from './lib/supabase'
+import { apiRequest, isSupabaseConfigured } from './lib/api'
+
+const sessionStorageKey = 'dompetku_app_session'
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -86,10 +89,8 @@ function Logo({ compact = false }) {
   )
 }
 
-function AuthScreen() {
-  const [mode, setMode] = useState('signin')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+function AuthScreen({ onAuthenticated }) {
+  const [secretKey, setSecretKey] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -98,18 +99,16 @@ function AuthScreen() {
     setLoading(true)
     setMessage('')
 
-    const action = mode === 'signin'
-      ? supabase.auth.signInWithPassword({ email, password })
-      : supabase.auth.signUp({ email, password })
-    const { error } = await action
-
-    setLoading(false)
-    if (error) {
-      setMessage(error.message)
-      return
-    }
-    if (mode === 'signup') {
-      setMessage('Akun dibuat. Periksa email Anda untuk konfirmasi sebelum masuk.')
+    try {
+      const data = await apiRequest('/login', {
+        method: 'POST',
+        body: { secret_key: secretKey },
+      })
+      onAuthenticated({ token: data.session_token, expiresAt: data.expires_at, user: data.user })
+    } catch (error) {
+      setMessage(error.message || 'Secret key tidak dikenali.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -130,25 +129,31 @@ function AuthScreen() {
       <section className="auth-panel">
         <div className="auth-card">
           <span className="auth-card__mobile-logo"><Logo /></span>
-          <p className="overline">SELAMAT DATANG</p>
-          <h2>{mode === 'signin' ? 'Masuk ke akunmu' : 'Buat akun baru'}</h2>
-          <p className="muted">Data keuanganmu tersimpan aman dan hanya dapat kamu akses.</p>
+          <span className="auth-card__key-icon"><KeyRound size={22} /></span>
+          <p className="overline">AKSES PRIBADI</p>
+          <h2>Masuk dengan secret key</h2>
+          <p className="muted">Masukkan secret key akunmu. Tidak perlu email atau kata sandi.</p>
           <form onSubmit={handleSubmit}>
-            <label>Email
-              <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nama@email.com" required />
-            </label>
-            <label>Kata sandi
-              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Minimal 6 karakter" minLength={6} required />
+            <label>Secret key
+              <input
+                type="password"
+                value={secretKey}
+                onChange={(event) => setSecretKey(event.target.value)}
+                placeholder="Masukkan secret key"
+                autoComplete="current-password"
+                autoCapitalize="none"
+                spellCheck="false"
+                required
+                autoFocus
+              />
             </label>
             {message && <p className="form-message" role="status">{message}</p>}
             <button className="button button--dark button--wide" disabled={loading}>
-              {loading ? 'Mohon tunggu…' : mode === 'signin' ? 'Masuk' : 'Daftar'}
+              {loading ? 'Memeriksa…' : 'Masuk'}
               {!loading && <ArrowRight size={17} />}
             </button>
           </form>
-          <button className="text-button" onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setMessage('') }}>
-            {mode === 'signin' ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
-          </button>
+          <p className="auth-hint">Setiap secret key memiliki data transaksi yang terpisah.</p>
         </div>
       </section>
     </main>
@@ -183,7 +188,7 @@ function DatabaseConfigurationRequired() {
   )
 }
 
-function Sidebar({ page, setPage, userEmail }) {
+function Sidebar({ page, setPage, userName, onSignOut }) {
   const navItems = [
     { id: 'dashboard', label: 'Ringkasan', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transaksi', icon: ArrowLeftRight },
@@ -209,22 +214,23 @@ function Sidebar({ page, setPage, userEmail }) {
         <p>Sisihkan minimal 20% pemasukan untuk tabungan dan investasi.</p>
       </div>
       <div className="sidebar__user">
-        <span className="avatar">{(userEmail || 'D').charAt(0).toUpperCase()}</span>
-        <div><strong>{userEmail ? userEmail.split('@')[0] : 'Mode Demo'}</strong><small>{userEmail || 'Data tersimpan lokal'}</small></div>
-        {isSupabaseConfigured && (
-          <button title="Keluar" aria-label="Keluar" onClick={() => supabase.auth.signOut()}><LogOut size={17} /></button>
-        )}
+        <span className="avatar">{(userName || 'D').charAt(0).toUpperCase()}</span>
+        <div><strong>{userName || 'Akun Dompetku'}</strong><small>Database tersinkron</small></div>
+        <button title="Keluar" aria-label="Keluar" onClick={onSignOut}><LogOut size={17} /></button>
       </div>
     </aside>
   )
 }
 
-function MobileHeader({ page, setPage, onAdd }) {
+function MobileHeader({ page, setPage, onAdd, onSignOut }) {
   return (
     <>
       <header className="mobile-header">
         <Logo />
-        <button className="icon-button" aria-label="Tambah transaksi" onClick={onAdd}><Plus size={20} /></button>
+        <div className="mobile-header__actions">
+          <button className="icon-button" aria-label="Keluar" title="Keluar" onClick={onSignOut}><LogOut size={18} /></button>
+          <button className="icon-button" aria-label="Tambah transaksi" onClick={onAdd}><Plus size={20} /></button>
+        </div>
       </header>
       <nav className="bottom-nav" aria-label="Navigasi mobile">
         <button className={page === 'dashboard' ? 'active' : ''} onClick={() => setPage('dashboard')}><LayoutDashboard size={20} /><span>Ringkasan</span></button>
@@ -582,57 +588,74 @@ function App() {
   const [loadingData, setLoadingData] = useState(false)
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return undefined
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session)
+    if (!isSupabaseConfigured) return
+
+    try {
+      const storedSession = JSON.parse(window.localStorage.getItem(sessionStorageKey))
+      if (storedSession?.token && storedSession?.user?.id) setSession(storedSession)
+    } catch {
+      window.localStorage.removeItem(sessionStorageKey)
+    } finally {
       setAuthReady(true)
-    })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession)
-      if (!nextSession) setTransactions([])
-      setAuthReady(true)
-    })
-    return () => listener.subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
     if (!session) return
     let active = true
-    let refreshTimer
 
     async function loadTransactions(showLoading = false) {
       if (showLoading) setLoadingData(true)
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('transaction_date', { ascending: false })
-        .order('created_at', { ascending: false })
-
-      if (!active) return
-      if (error) showToast(`Data belum dapat dimuat: ${error.message}`)
-      else setTransactions(data || [])
-      if (showLoading) setLoadingData(false)
-    }
-
-    function scheduleRefresh() {
-      window.clearTimeout(refreshTimer)
-      refreshTimer = window.setTimeout(() => loadTransactions(false), 150)
+      try {
+        const data = await apiRequest('/transactions', { token: session.token })
+        if (active) setTransactions(data.transactions || [])
+      } catch (error) {
+        if (!active) return
+        if (error.status === 401) clearSession()
+        else showToast(`Data belum dapat dimuat: ${error.message}`)
+      } finally {
+        if (active && showLoading) setLoadingData(false)
+      }
     }
 
     loadTransactions(true)
-    const channel = supabase
-      .channel(`transactions-${session.user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, scheduleRefresh)
-      .subscribe()
+    const refreshInterval = window.setInterval(() => loadTransactions(false), 8000)
+    const refreshOnFocus = () => loadTransactions(false)
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') loadTransactions(false)
+    }
+    window.addEventListener('focus', refreshOnFocus)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
 
     return () => {
       active = false
-      window.clearTimeout(refreshTimer)
-      supabase.removeChannel(channel)
+      window.clearInterval(refreshInterval)
+      window.removeEventListener('focus', refreshOnFocus)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [session])
+
+  function setAuthenticatedSession(nextSession) {
+    window.localStorage.setItem(sessionStorageKey, JSON.stringify(nextSession))
+    setSession(nextSession)
+  }
+
+  function clearSession() {
+    window.localStorage.removeItem(sessionStorageKey)
+    setTransactions([])
+    setSession(null)
+  }
+
+  async function signOut() {
+    try {
+      if (session?.token) await apiRequest('/logout', { method: 'POST', token: session.token })
+    } catch {
+      // Sesi lokal tetap dihapus jika server tidak dapat dijangkau.
+    } finally {
+      clearSession()
+    }
+  }
 
   function showToast(message) {
     setToast(message)
@@ -641,22 +664,33 @@ function App() {
 
   async function addTransaction(values) {
     setSaving(true)
-    const { data, error } = await supabase.from('transactions').insert({ ...values, note: values.note || null, user_id: session.user.id }).select().single()
-    if (error) {
+    try {
+      const data = await apiRequest('/transactions', {
+        method: 'POST',
+        token: session.token,
+        body: { ...values, note: values.note || null },
+      })
+      setTransactions((current) => [data.transaction, ...current])
+      setModalOpen(false)
+      showToast('Transaksi berhasil disimpan.')
+    } catch (error) {
+      if (error.status === 401) clearSession()
       showToast(`Gagal menyimpan: ${error.message}`)
+    } finally {
       setSaving(false)
-      return
     }
-    setTransactions((current) => [data, ...current])
-    setSaving(false)
-    setModalOpen(false)
-    showToast('Transaksi berhasil disimpan.')
   }
 
   async function deleteTransaction(transaction) {
     if (!window.confirm(`Hapus transaksi “${transaction.note || transaction.category}”?`)) return
-    const { error } = await supabase.from('transactions').delete().eq('id', transaction.id)
-    if (error) {
+    try {
+      await apiRequest('/transactions', {
+        method: 'DELETE',
+        token: session.token,
+        body: { id: transaction.id },
+      })
+    } catch (error) {
+      if (error.status === 401) clearSession()
       showToast(`Gagal menghapus: ${error.message}`)
       return
     }
@@ -671,12 +705,14 @@ function App() {
     }
 
     setDeletingAll(true)
-    const { error } = await supabase
-      .from('transactions')
-      .delete()
-      .eq('user_id', session.user.id)
-
-    if (error) {
+    try {
+      await apiRequest('/transactions', {
+        method: 'DELETE',
+        token: session.token,
+        body: { all: true },
+      })
+    } catch (error) {
+      if (error.status === 401) clearSession()
       showToast(`Gagal menghapus semua transaksi: ${error.message}`)
       setDeletingAll(false)
       return
@@ -690,12 +726,14 @@ function App() {
 
   if (!isSupabaseConfigured) return <DatabaseConfigurationRequired />
   if (!authReady) return <div className="app-loader"><Logo /><span /></div>
-  if (!session) return <AuthScreen />
+  if (!session) return <AuthScreen onAuthenticated={setAuthenticatedSession} />
+
+  const accountName = session.user.name || 'Akun Dompetku'
 
   return (
     <div className="app-shell">
-      <Sidebar page={page} setPage={setPage} userEmail={session?.user?.email} />
-      <MobileHeader page={page} setPage={setPage} onAdd={() => setModalOpen(true)} />
+      <Sidebar page={page} setPage={setPage} userName={accountName} onSignOut={signOut} />
+      <MobileHeader page={page} setPage={setPage} onAdd={() => setModalOpen(true)} onSignOut={signOut} />
       <div className="app-main">
         <Topbar onAdd={() => setModalOpen(true)} />
         <main className="page-content">

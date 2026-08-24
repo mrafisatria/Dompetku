@@ -230,8 +230,9 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
 .auth-card h2 { margin-bottom: 8px; color: #253f3a; font-size: 27px; letter-spacing: -.045em; }
 .auth-card > .muted { margin-bottom: 25px; font-size: 11px; line-height: 1.6; }
 .auth-card__mobile-logo { display: none; margin-bottom: 45px; }
+.auth-card__key-icon { display: grid; width: 46px; height: 46px; margin-bottom: 19px; place-items: center; border-radius: 14px; background: #e5eee9; color: #5b8d7b; }
 .form-message { margin: -3px 0 0; padding: 9px 11px; border-radius: 9px; background: #f6e7df; color: #985c4b; font-size: 10px; line-height: 1.45; }
-.auth-card > .text-button { display: flex; margin: 17px auto 0; }
+.auth-hint { margin: 16px 0 0; color: #949892; font-size: 9px; line-height: 1.55; text-align: center; }
 .config-card__icon { display: grid; width: 48px; height: 48px; margin-bottom: 20px; place-items: center; border-radius: 15px; background: #e2eee9; color: #598a78; }
 .config-card code { padding: 2px 4px; border-radius: 4px; background: #eeeae1; color: #465b55; font-size: 9px; }
 .app-loader, .content-loader { display: flex; min-height: 100vh; align-items: center; justify-content: center; flex-direction: column; gap: 22px; color: #71807b; font-size: 11px; }
@@ -260,6 +261,7 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
   .sidebar, .topbar { display: none; }
   .app-main { margin-left: 0; }
   .mobile-header { position: sticky; top: 0; z-index: 30; display: flex; height: 64px; align-items: center; justify-content: space-between; padding: 0 18px; border-bottom: 1px solid var(--line); background: rgba(247,245,239,.92); backdrop-filter: blur(12px); }
+  .mobile-header__actions { display: flex; gap: 8px; }
   .mobile-header .brand { font-size: 18px; }
   .mobile-header .brand__mark { width: 27px; height: 27px; }
   .bottom-nav { position: fixed; inset: auto 0 0; z-index: 40; display: grid; height: 70px; grid-template-columns: 1fr 70px 1fr; align-items: center; padding: 5px 22px max(5px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: rgba(255,254,251,.96); backdrop-filter: blur(14px); }
