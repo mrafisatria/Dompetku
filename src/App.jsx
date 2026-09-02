@@ -25,6 +25,7 @@ import {
   KeyRound,
   LogOut,
   Menu,
+  Moon,
   Pencil,
   Plus,
   ReceiptText,
@@ -34,6 +35,7 @@ import {
   Trash2,
   TrendingDown,
   TrendingUp,
+  Sun,
   WalletCards,
   X,
 } from 'lucide-react'
@@ -41,6 +43,7 @@ import { apiRequest, isSupabaseConfigured } from './lib/api'
 import { formatAmountInput, sanitizeAmountInput } from './lib/format'
 
 const sessionStorageKey = 'dompetku_app_session'
+const themeStorageKey = 'dompetku_color_theme'
 const dashboardNow = new Date()
 const dashboardYear = dashboardNow.getFullYear()
 const dashboardMonth = String(dashboardNow.getMonth() + 1).padStart(2, '0')
@@ -69,7 +72,18 @@ const monthFormatter = new Intl.DateTimeFormat('id-ID', { month: 'short' })
 
 const incomeCategories = ['Gaji', 'Freelance', 'Bisnis', 'Investasi', 'Hadiah', 'Lainnya']
 const expenseCategories = ['Makanan', 'Transportasi', 'Tagihan', 'Belanja', 'Hiburan', 'Kesehatan', 'Pendidikan', 'Lainnya']
+const quickAmounts = [10000, 50000, 100000, 500000, 1000000]
 const chartColors = ['#efaa92', '#8bbdab', '#aaa6dc', '#7daecb', '#e9c76b', '#d38fa5']
+
+function getInitialTheme() {
+  try {
+    const savedTheme = window.localStorage.getItem(themeStorageKey)
+    if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  } catch {
+    return 'light'
+  }
+}
 
 function formatDate(value) {
   return dateFormatter.format(new Date(`${value}T00:00:00`))
@@ -96,7 +110,16 @@ function Logo({ compact = false }) {
   )
 }
 
-function AuthScreen({ onAuthenticated }) {
+function ThemeToggle({ theme, onToggle, className = '' }) {
+  const isDark = theme === 'dark'
+  return (
+    <button type="button" className={`icon-button theme-toggle ${className}`} onClick={onToggle} aria-label={isDark ? 'Gunakan mode terang' : 'Gunakan mode malam'} title={isDark ? 'Mode terang' : 'Mode malam'}>
+      {isDark ? <Sun size={18} /> : <Moon size={18} />}
+    </button>
+  )
+}
+
+function AuthScreen({ onAuthenticated, theme, onToggleTheme }) {
   const [secretKey, setSecretKey] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -121,6 +144,7 @@ function AuthScreen({ onAuthenticated }) {
 
   return (
     <main className="auth-page">
+      <ThemeToggle theme={theme} onToggle={onToggleTheme} className="theme-toggle--auth" />
       <section className="auth-story">
         <Logo />
         <div className="auth-story__content">
@@ -167,9 +191,10 @@ function AuthScreen({ onAuthenticated }) {
   )
 }
 
-function DatabaseConfigurationRequired() {
+function DatabaseConfigurationRequired({ theme, onToggleTheme }) {
   return (
     <main className="auth-page">
+      <ThemeToggle theme={theme} onToggle={onToggleTheme} className="theme-toggle--auth" />
       <section className="auth-story">
         <Logo />
         <div className="auth-story__content">
@@ -229,12 +254,13 @@ function Sidebar({ page, setPage, userName, onSignOut }) {
   )
 }
 
-function MobileHeader({ page, setPage, onAdd, onSignOut }) {
+function MobileHeader({ page, setPage, onAdd, onSignOut, theme, onToggleTheme }) {
   return (
     <>
       <header className="mobile-header">
         <Logo />
         <div className="mobile-header__actions">
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
           <button className="icon-button" aria-label="Keluar" title="Keluar" onClick={onSignOut}><LogOut size={18} /></button>
           <button className="icon-button" aria-label="Tambah transaksi" onClick={onAdd}><Plus size={20} /></button>
         </div>
@@ -248,11 +274,12 @@ function MobileHeader({ page, setPage, onAdd, onSignOut }) {
   )
 }
 
-function Topbar({ onAdd }) {
+function Topbar({ onAdd, theme, onToggleTheme }) {
   return (
     <header className="topbar">
       <div />
       <div className="topbar__actions">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         <button className="icon-button" aria-label="Notifikasi"><Bell size={19} /></button>
         <button className="button button--dark" onClick={onAdd}><Plus size={17} /> Catat transaksi</button>
       </div>
@@ -589,6 +616,10 @@ function TransactionModal({ transaction, onClose, onSave, saving }) {
           <label className="amount-field">Nominal
             <span><b>Rp</b><input autoFocus type="text" inputMode="numeric" autoComplete="off" value={formatAmountInput(form.amount)} onChange={(event) => setForm({ ...form, amount: sanitizeAmountInput(event.target.value) })} placeholder="0" required /></span>
           </label>
+          <div className="quick-amounts" role="group" aria-label="Pilihan nominal cepat">
+            <span>Isi cepat</span>
+            <div>{quickAmounts.map((amount) => <button key={amount} type="button" className={Number(form.amount) === amount ? 'active' : ''} aria-pressed={Number(form.amount) === amount} onClick={() => setForm({ ...form, amount: String(amount) })}>{amount >= 1000000 ? `${amount / 1000000} jt` : `${amount / 1000} rb`}</button>)}</div>
+          </div>
           <div className="form-grid">
             <label>Kategori<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
             <label>Tanggal<input type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} required /></label>
@@ -602,6 +633,7 @@ function TransactionModal({ transaction, onClose, onSave, saving }) {
 }
 
 function App() {
+  const [theme, setTheme] = useState(getInitialTheme)
   const [session, setSession] = useState(null)
   const [authReady, setAuthReady] = useState(false)
   const [page, setPage] = useState('dashboard')
@@ -613,6 +645,21 @@ function App() {
   const [deletingAll, setDeletingAll] = useState(false)
   const [toast, setToast] = useState('')
   const [loadingData, setLoadingData] = useState(false)
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#101816' : '#f7f5ef')
+    try {
+      window.localStorage.setItem(themeStorageKey, theme)
+    } catch {
+      // Tema tetap diterapkan meskipun penyimpanan browser tidak tersedia.
+    }
+  }, [theme])
+
+  function toggleTheme() {
+    setTheme((current) => current === 'dark' ? 'light' : 'dark')
+  }
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -788,18 +835,18 @@ function App() {
     showToast('Semua transaksi berhasil dihapus.')
   }
 
-  if (!isSupabaseConfigured) return <DatabaseConfigurationRequired />
+  if (!isSupabaseConfigured) return <DatabaseConfigurationRequired theme={theme} onToggleTheme={toggleTheme} />
   if (!authReady) return <div className="app-loader"><Logo /><span /></div>
-  if (!session) return <AuthScreen onAuthenticated={setAuthenticatedSession} />
+  if (!session) return <AuthScreen onAuthenticated={setAuthenticatedSession} theme={theme} onToggleTheme={toggleTheme} />
 
   const accountName = session.user.name || 'Akun Dompetku'
 
   return (
     <div className="app-shell">
       <Sidebar page={page} setPage={setPage} userName={accountName} onSignOut={signOut} />
-      <MobileHeader page={page} setPage={setPage} onAdd={openAddTransaction} onSignOut={signOut} />
+      <MobileHeader page={page} setPage={setPage} onAdd={openAddTransaction} onSignOut={signOut} theme={theme} onToggleTheme={toggleTheme} />
       <div className="app-main">
-        <Topbar onAdd={openAddTransaction} />
+        <Topbar onAdd={openAddTransaction} theme={theme} onToggleTheme={toggleTheme} />
         <main className="page-content">
           {loadingData ? <div className="content-loader"><span /> Memuat catatan keuangan…</div> : page === 'dashboard'
             ? <Dashboard transactions={transactions} onEdit={openEditTransaction} onDelete={deleteTransaction} onAdd={openAddTransaction} goToTransactions={() => setPage('transactions')} />

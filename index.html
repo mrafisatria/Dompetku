@@ -6,6 +6,16 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#f7f5ef" />
     <meta name="description" content="Dompetku — pencatatan pemasukan dan pengeluaran yang sederhana." />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('dompetku_color_theme')
+        const theme = savedTheme === 'light' || savedTheme === 'dark'
+          ? savedTheme
+          : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.dataset.theme = theme
+        document.documentElement.style.colorScheme = theme
+      } catch {}
+    </script>
     <title>Dompetku — Manajemen Keuangan</title>
   </head>
   <body>
