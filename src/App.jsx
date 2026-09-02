@@ -464,15 +464,19 @@ function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) 
 function TransactionsPage({ transactions, onEdit, onDelete, onDeleteAll, onAdd }) {
   const [search, setSearch] = useState('')
   const [type, setType] = useState('all')
-  const [month, setMonth] = useState('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [category, setCategory] = useState('all')
 
-  const months = useMemo(() => [...new Set(transactions.map((item) => getMonthKey(item.transaction_date)))].sort().reverse(), [transactions])
+  const categories = useMemo(() => [...new Set(transactions.map((item) => item.category))].sort((a, b) => a.localeCompare(b, 'id')), [transactions])
   const filtered = useMemo(() => transactions.filter((item) => {
     const query = search.toLowerCase()
     return (type === 'all' || item.type === type)
-      && (month === 'all' || getMonthKey(item.transaction_date) === month)
+      && (!startDate || item.transaction_date >= startDate)
+      && (!endDate || item.transaction_date <= endDate)
+      && (category === 'all' || item.category === category)
       && (`${item.note} ${item.category}`.toLowerCase().includes(query))
-  }), [transactions, search, type, month])
+  }), [transactions, search, type, startDate, endDate, category])
 
   function exportCsv() {
     const rows = [
@@ -503,7 +507,9 @@ function TransactionsPage({ transactions, onEdit, onDelete, onDeleteAll, onAdd }
           <label className="search-field"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari transaksi…" /></label>
           <div className="filter-group">
             <label><span className="sr-only">Filter tipe</span><select value={type} onChange={(event) => setType(event.target.value)}><option value="all">Semua tipe</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select><ChevronDown size={15} /></label>
-            <label><CalendarDays size={16} /><span className="sr-only">Filter bulan</span><select value={month} onChange={(event) => setMonth(event.target.value)}><option value="all">Semua bulan</option>{months.map((item) => <option key={item} value={item}>{getMonthLabel(item)}</option>)}</select><ChevronDown size={15} /></label>
+            <label><span className="sr-only">Filter kategori</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">Semua kategori</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select><ChevronDown size={15} /></label>
+            <label className="range-filter"><span>Dari</span><input type="date" value={startDate} max={endDate || undefined} onChange={(event) => setStartDate(event.target.value)} aria-label="Dari tanggal" /></label>
+            <label className="range-filter"><span>Sampai</span><input type="date" value={endDate} min={startDate || undefined} onChange={(event) => setEndDate(event.target.value)} aria-label="Sampai tanggal" /></label>
           </div>
         </div>
         <div className="result-count"><strong>{filtered.length}</strong> transaksi ditemukan</div>
