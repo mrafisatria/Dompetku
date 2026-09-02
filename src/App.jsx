@@ -322,22 +322,24 @@ function TransactionsTable({ transactions, onEdit, onDelete, compact = false }) 
 }
 
 function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) {
-  const [filterDate, setFilterDate] = useState('')
+  const [filterStartDate, setFilterStartDate] = useState('')
+  const [filterEndDate, setFilterEndDate] = useState('')
   const [filterMonth, setFilterMonth] = useState(defaultDashboardMonth)
   const [filterYear, setFilterYear] = useState(defaultDashboardYear)
   const [filterCategory, setFilterCategory] = useState('all')
 
   const years = useMemo(() => [...new Set([defaultDashboardYear, ...transactions.map((item) => item.transaction_date.slice(0, 4))])].sort().reverse(), [transactions])
   const categories = useMemo(() => [...new Set(transactions.map((item) => item.category))].sort((a, b) => a.localeCompare(b, 'id')), [transactions])
-  const hasActiveFilters = Boolean(filterDate || filterMonth !== defaultDashboardMonth || filterYear !== defaultDashboardYear || filterCategory !== 'all')
+  const hasDateRange = Boolean(filterStartDate || filterEndDate)
+  const hasActiveFilters = Boolean(hasDateRange || filterMonth !== defaultDashboardMonth || filterYear !== defaultDashboardYear || filterCategory !== 'all')
 
   const filteredTransactions = useMemo(() => transactions.filter((item) => {
     const [year, month] = item.transaction_date.split('-')
-    const periodMatches = filterDate
-      ? item.transaction_date === filterDate
+    const periodMatches = hasDateRange
+      ? (!filterStartDate || item.transaction_date >= filterStartDate) && (!filterEndDate || item.transaction_date <= filterEndDate)
       : (filterMonth === 'all' || month === filterMonth) && (filterYear === 'all' || year === filterYear)
     return periodMatches && (filterCategory === 'all' || item.category === filterCategory)
-  }), [transactions, filterDate, filterMonth, filterYear, filterCategory])
+  }), [transactions, hasDateRange, filterStartDate, filterEndDate, filterMonth, filterYear, filterCategory])
 
   const totals = useMemo(() => filteredTransactions.reduce((acc, item) => {
     const amount = Number(item.amount)
@@ -391,22 +393,28 @@ function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) 
           <div><strong>Filter ringkasan</strong><small>{filteredTransactions.length} dari {transactions.length} transaksi ditampilkan</small></div>
         </div>
         <div className="dashboard-filters__controls">
-          <label>Tanggal
+          <label>Dari tanggal
             <span className="date-control">
-              <input type="date" value={filterDate} onChange={(event) => { const value = event.target.value; setFilterDate(value); setFilterMonth(value ? 'all' : defaultDashboardMonth); setFilterYear(value ? 'all' : defaultDashboardYear) }} />
+              <input type="date" value={filterStartDate} max={filterEndDate || undefined} onChange={(event) => { const value = event.target.value; setFilterStartDate(value); setFilterMonth(value || filterEndDate ? 'all' : defaultDashboardMonth); setFilterYear(value || filterEndDate ? 'all' : defaultDashboardYear) }} aria-label="Tanggal mulai" />
+              <CalendarDays size={14} aria-hidden="true" />
+            </span>
+          </label>
+          <label>Sampai tanggal
+            <span className="date-control">
+              <input type="date" value={filterEndDate} min={filterStartDate || undefined} onChange={(event) => { const value = event.target.value; setFilterEndDate(value); setFilterMonth(filterStartDate || value ? 'all' : defaultDashboardMonth); setFilterYear(filterStartDate || value ? 'all' : defaultDashboardYear) }} aria-label="Tanggal akhir" />
               <CalendarDays size={14} aria-hidden="true" />
             </span>
           </label>
           <label>Bulan
-            <span className="select-control"><select value={filterMonth} onChange={(event) => setFilterMonth(event.target.value)} disabled={Boolean(filterDate)}><option value="all">Semua bulan</option>{Array.from({ length: 12 }, (_, index) => { const value = String(index + 1).padStart(2, '0'); return <option key={value} value={value}>{new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, index, 1))}</option> })}</select><ChevronDown size={14} /></span>
+            <span className="select-control"><select value={filterMonth} onChange={(event) => setFilterMonth(event.target.value)} disabled={hasDateRange}><option value="all">Semua bulan</option>{Array.from({ length: 12 }, (_, index) => { const value = String(index + 1).padStart(2, '0'); return <option key={value} value={value}>{new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, index, 1))}</option> })}</select><ChevronDown size={14} /></span>
           </label>
           <label>Tahun
-            <span className="select-control"><select value={filterYear} onChange={(event) => setFilterYear(event.target.value)} disabled={Boolean(filterDate)}><option value="all">Semua tahun</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select><ChevronDown size={14} /></span>
+            <span className="select-control"><select value={filterYear} onChange={(event) => setFilterYear(event.target.value)} disabled={hasDateRange}><option value="all">Semua tahun</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select><ChevronDown size={14} /></span>
           </label>
           <label>Kategori
             <span className="select-control"><select value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}><option value="all">Semua kategori</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></span>
           </label>
-          {hasActiveFilters && <button className="filter-reset" onClick={() => { setFilterDate(''); setFilterMonth(defaultDashboardMonth); setFilterYear(defaultDashboardYear); setFilterCategory('all') }}><X size={14} /> Reset</button>}
+          {hasActiveFilters && <button className="filter-reset" onClick={() => { setFilterStartDate(''); setFilterEndDate(''); setFilterMonth(defaultDashboardMonth); setFilterYear(defaultDashboardYear); setFilterCategory('all') }}><X size={14} /> Reset</button>}
         </div>
       </section>
 
