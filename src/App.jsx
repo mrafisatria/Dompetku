@@ -41,8 +41,11 @@ import { apiRequest, isSupabaseConfigured } from './lib/api'
 import { formatAmountInput, sanitizeAmountInput } from './lib/format'
 
 const sessionStorageKey = 'dompetku_app_session'
-const defaultDashboardMonth = String(new Date().getMonth() + 1).padStart(2, '0')
-const defaultDashboardYear = String(new Date().getFullYear())
+const dashboardNow = new Date()
+const dashboardYear = dashboardNow.getFullYear()
+const dashboardMonth = String(dashboardNow.getMonth() + 1).padStart(2, '0')
+const defaultDashboardStartDate = `${dashboardYear}-${dashboardMonth}-01`
+const defaultDashboardEndDate = `${dashboardYear}-${dashboardMonth}-${String(new Date(dashboardYear, dashboardNow.getMonth() + 1, 0).getDate()).padStart(2, '0')}`
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -322,24 +325,17 @@ function TransactionsTable({ transactions, onEdit, onDelete, compact = false }) 
 }
 
 function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) {
-  const [filterStartDate, setFilterStartDate] = useState('')
-  const [filterEndDate, setFilterEndDate] = useState('')
-  const [filterMonth, setFilterMonth] = useState(defaultDashboardMonth)
-  const [filterYear, setFilterYear] = useState(defaultDashboardYear)
+  const [filterStartDate, setFilterStartDate] = useState(defaultDashboardStartDate)
+  const [filterEndDate, setFilterEndDate] = useState(defaultDashboardEndDate)
   const [filterCategory, setFilterCategory] = useState('all')
 
-  const years = useMemo(() => [...new Set([defaultDashboardYear, ...transactions.map((item) => item.transaction_date.slice(0, 4))])].sort().reverse(), [transactions])
   const categories = useMemo(() => [...new Set(transactions.map((item) => item.category))].sort((a, b) => a.localeCompare(b, 'id')), [transactions])
-  const hasDateRange = Boolean(filterStartDate || filterEndDate)
-  const hasActiveFilters = Boolean(hasDateRange || filterMonth !== defaultDashboardMonth || filterYear !== defaultDashboardYear || filterCategory !== 'all')
 
   const filteredTransactions = useMemo(() => transactions.filter((item) => {
-    const [year, month] = item.transaction_date.split('-')
-    const periodMatches = hasDateRange
-      ? (!filterStartDate || item.transaction_date >= filterStartDate) && (!filterEndDate || item.transaction_date <= filterEndDate)
-      : (filterMonth === 'all' || month === filterMonth) && (filterYear === 'all' || year === filterYear)
+    const periodMatches = (!filterStartDate || item.transaction_date >= filterStartDate)
+      && (!filterEndDate || item.transaction_date <= filterEndDate)
     return periodMatches && (filterCategory === 'all' || item.category === filterCategory)
-  }), [transactions, hasDateRange, filterStartDate, filterEndDate, filterMonth, filterYear, filterCategory])
+  }), [transactions, filterStartDate, filterEndDate, filterCategory])
 
   const totals = useMemo(() => filteredTransactions.reduce((acc, item) => {
     const amount = Number(item.amount)
@@ -393,28 +389,22 @@ function Dashboard({ transactions, onEdit, onDelete, onAdd, goToTransactions }) 
           <div><strong>Filter ringkasan</strong><small>{filteredTransactions.length} dari {transactions.length} transaksi ditampilkan</small></div>
         </div>
         <div className="dashboard-filters__controls">
-          <label>Dari tanggal
+          <label>Dari
             <span className="date-control">
-              <input type="date" value={filterStartDate} max={filterEndDate || undefined} onChange={(event) => { const value = event.target.value; setFilterStartDate(value); setFilterMonth(value || filterEndDate ? 'all' : defaultDashboardMonth); setFilterYear(value || filterEndDate ? 'all' : defaultDashboardYear) }} aria-label="Tanggal mulai" />
+              <input type="date" value={filterStartDate} max={filterEndDate || undefined} onChange={(event) => setFilterStartDate(event.target.value)} aria-label="Tanggal mulai" />
               <CalendarDays size={14} aria-hidden="true" />
             </span>
           </label>
-          <label>Sampai tanggal
+          <label>Sampai
             <span className="date-control">
-              <input type="date" value={filterEndDate} min={filterStartDate || undefined} onChange={(event) => { const value = event.target.value; setFilterEndDate(value); setFilterMonth(filterStartDate || value ? 'all' : defaultDashboardMonth); setFilterYear(filterStartDate || value ? 'all' : defaultDashboardYear) }} aria-label="Tanggal akhir" />
+              <input type="date" value={filterEndDate} min={filterStartDate || undefined} onChange={(event) => setFilterEndDate(event.target.value)} aria-label="Tanggal akhir" />
               <CalendarDays size={14} aria-hidden="true" />
             </span>
-          </label>
-          <label>Bulan
-            <span className="select-control"><select value={filterMonth} onChange={(event) => setFilterMonth(event.target.value)} disabled={hasDateRange}><option value="all">Semua bulan</option>{Array.from({ length: 12 }, (_, index) => { const value = String(index + 1).padStart(2, '0'); return <option key={value} value={value}>{new Intl.DateTimeFormat('id-ID', { month: 'long' }).format(new Date(2026, index, 1))}</option> })}</select><ChevronDown size={14} /></span>
-          </label>
-          <label>Tahun
-            <span className="select-control"><select value={filterYear} onChange={(event) => setFilterYear(event.target.value)} disabled={hasDateRange}><option value="all">Semua tahun</option>{years.map((year) => <option key={year} value={year}>{year}</option>)}</select><ChevronDown size={14} /></span>
           </label>
           <label>Kategori
             <span className="select-control"><select value={filterCategory} onChange={(event) => setFilterCategory(event.target.value)}><option value="all">Semua kategori</option>{categories.map((category) => <option key={category} value={category}>{category}</option>)}</select><ChevronDown size={14} /></span>
           </label>
-          {hasActiveFilters && <button className="filter-reset" onClick={() => { setFilterStartDate(''); setFilterEndDate(''); setFilterMonth(defaultDashboardMonth); setFilterYear(defaultDashboardYear); setFilterCategory('all') }}><X size={14} /> Reset</button>}
+          <button className="filter-reset" onClick={() => { setFilterStartDate(defaultDashboardStartDate); setFilterEndDate(defaultDashboardEndDate); setFilterCategory('all') }}><X size={14} /> Reset</button>
         </div>
       </section>
 
