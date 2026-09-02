@@ -213,7 +213,11 @@ tr:hover .row-action button, .row-action button:focus { opacity: 1; }
 .quick-amounts > div::-webkit-scrollbar { display: none; }
 .quick-amounts button { min-height: 29px; flex: 0 0 auto; padding: 0 10px; border: 1px solid #dedbd1; border-radius: 9px; background: #f8f6f0; color: #65716c; font-size: 9px; font-weight: 700; }
 .quick-amounts button:hover, .quick-amounts button.active { border-color: #8bb6a6; background: #e4efe9; color: #477663; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-grid { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.form-grid > label { min-width: 0; max-width: 100%; }
+.transaction-date-field { overflow: hidden; }
+.transaction-date-field input[type='date'] { display: block; width: 100%; min-width: 0; max-width: 100%; inline-size: 100%; min-inline-size: 0; max-inline-size: 100%; appearance: none; -webkit-appearance: none; }
+.transaction-date-field input[type='date']::-webkit-date-and-time-value { min-width: 0; text-align: left; }
 .optional { color: #a2a49f; font-size: 8px; font-weight: 500; }
 .modal__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 3px; padding-top: 16px; border-top: 1px solid #ebe8e0; }
 .danger-modal { width: min(100%, 470px); }

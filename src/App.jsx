@@ -622,7 +622,7 @@ function TransactionModal({ transaction, onClose, onSave, saving }) {
           </div>
           <div className="form-grid">
             <label>Kategori<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
-            <label>Tanggal<input type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} required /></label>
+            <label className="transaction-date-field">Tanggal<input type="date" value={form.transaction_date} onChange={(event) => setForm({ ...form, transaction_date: event.target.value })} required /></label>
           </div>
           <label>Catatan <span className="optional">opsional</span><textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} maxLength={240} placeholder="Contoh: Belanja mingguan di pasar" rows={3} /></label>
           <div className="modal__actions"><button type="button" className="button button--ghost" onClick={onClose} disabled={saving}>Batal</button><button className="button button--dark" disabled={saving}>{saving ? 'Menyimpan…' : isEditing ? 'Simpan perubahan' : 'Simpan transaksi'}<ArrowRight size={17} /></button></div>
