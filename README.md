@@ -13,6 +13,12 @@ Dompetku menggunakan Supabase sebagai satu-satunya sumber data. Tanpa konfiguras
 
 Login aplikasi menggunakan satu kolom **secret key akun**. Dua akun tetap disimpan dalam tabel `public.app_users`, sehingga masing-masing memiliki data transaksi sendiri tanpa menggunakan email atau kata sandi Supabase Auth.
 
+## Ikon layar utama
+
+Ikon layar utama menggunakan logo yang sama dengan `public/favicon.svg`. iPhone menggunakan `public/apple-touch-icon.png` (180×180), sedangkan manifest `public/manifest.webmanifest` menyediakan ikon PNG berukuran 192×192 dan 512×512 di `public/icons/`. Ikon PNG memakai latar pastel solid agar tidak menjadi transparan atau hitam ketika dipasang.
+
+Setelah pembaruan ikon sudah tayang, jika ikon lama masih berupa huruf D, hapus pintasan Dompetku dari layar utama, buka kembali situs di Safari, lalu pilih **Bagikan → Tambah ke Layar Utama**. Ini bukan tindakan hapus transaksi; transaksi tetap tersimpan di database. Login kembali jika diminta. Manifest mengatur pembukaan sebagai aplikasi mandiri, tetapi tidak menambahkan dukungan offline.
+
 ## Menghubungkan Supabase
 
 1. Jalankan isi `supabase/schema.sql` di SQL Editor proyek Supabase.
